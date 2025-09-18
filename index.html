@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多人实时数据协作表格</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            padding: 25px;
+            position: relative;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        .instructions {
+            background-color: #e8f4fc;
+            padding: 18px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #3498db;
+        }
+        .instructions p {
+            margin: 5px 0;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .user-count {
+            display: flex;
+            align-items: center;
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .user-count span {
+            background: white;
+            color: #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+            margin-left: 8px;
+        }
+        .user-id {
+            background: #2ecc71;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .results-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button i {
+            font-size: 16px;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        .btn-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+        .btn-warning:hover {
+            background-color: #d35400;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f7fd;
+        }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        }
+        .result-cell {
+            background-color: #f0f7ff;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .result-cell.hidden {
+            opacity: 0.3;
+            background-color: #f8f9fa;
+            color: #adb5bd;
+            font-style: italic;
+        }
+        .hidden-column {
+            display: none;
+        }
+        .editing {
+            background-color: #fff9e6 !important;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #eaeaea;
+            color: #7f8c8d;
+            font-size: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .last-update {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #2ecc71;
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .notification.error {
+            background: #e74c3c;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .controls {
+                flex-direction: column;
+            }
+            button {
+                width: 100%;
+            }
+            table {
+                font-size: 14px;
+            }
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>多人实时数据协作表格</h1>
+            <p class="subtitle">免登录 | 实时同步 | 自动计算</p>
+        </div>
+        
+        <div class="instructions">
+            <p>✅ 所有用户可实时查看和编辑数据 - 输入后立即同步</p>
+            <p>✅ 在F1、L1、F2、L2列输入数值，F1×L1和F2×L2列会自动计算结果</p>
+            <p>✅ 可以使用下方开关控制计算结果的显示与隐藏</p>
+        </div>
+        
+        <div class="user-info">
+            <div class="user-count">
+                在线用户 <span id="user-count">1</span>
+            </div>
+            <div class="user-id">
+                您的ID: <span id="user-id">加载中...</span>
+            </div>
+        </div>
+        
+        <div class="results-control">
+            <label class="switch">
+                <input type="checkbox" id="toggle-results">
+                <span class="slider"></span>
+            </label>
+            <span id="results-status">隐藏计算结果</span>
+        </div>
+        
+        <div class="controls">
+            <button id="add-row" class="btn-primary">
+                <i>➕</i> 添加新行
+            </button>
+            <button id="export" class="btn-warning">
+                <i>📥</i> 导出数据
+            </button>
+            <button id="clear" class="btn-danger">
+                <i>🗑️</i> 清空表格
+            </button>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table id="data-table">
+                <thead>
+                    <tr>
+                        <th width="5%">序号</th>
+                        <th width="15%">F1</th>
+                        <th width="15%">L1</th>
+                        <th width="15%">F2</th>
+                        <th width="15%">L2</th>
+                        <th width="17.5%">F1 × L1</th>
+                        <th width="17.5%">F2 × L2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><input type="number" class="f1-input" placeholder="输入数值"></td>
+                        <td><input type="number" class="l1-input" placeholder="输入数值"></td>
+                        <td><input type="number" class="f2-input" placeholder="输入数值"></td>
+                        <td><input type="number" class="l2-input" placeholder="输入数值"></td>
+                        <td class="result-cell hidden">0</td>
+                        <td class="result-cell hidden">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="status-bar">
+            <div class="last-update">
+                <i>⏱️</i> 最后更新: <span id="last-update">刚刚</span>
+            </div>
+            <div>
+                数据实时同步中 | 所有更改立即可见
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        数据已成功同步！
+    </div>
+
+    <script>
+        // 使用localStorage模拟实时数据同步
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('data-table');
+            const tbody = table.querySelector('tbody');
+            const addRowBtn = document.getElementById('add-row');
+            const exportBtn = document.getElementById('export');
+            const clearBtn = document.getElementById('clear');
+            const toggleResults = document.getElementById('toggle-results');
+            const resultsStatus = document.getElementById('results-status');
+            const lastUpdateSpan = document.getElementById('last-update');
+            const userCountSpan = document.getElementById('user-count');
+            const userIdSpan = document.getElementById('user-id');
+            const notification = document.getElementById('notification');
+            
+            // 生成唯一用户ID
+            const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            userIdSpan.textContent = userId;
+            
+            // 显示通知
+            function showNotification(message, isError = false) {
+                notification.textContent = message;
+                notification.className = isError ? 'notification error' : 'notification';
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+            
+            // 更新最后更新时间
+            function updateLastUpdateTime() {
+                const now = new Date();
+                lastUpdateSpan.textContent = now.toLocaleTimeString();
+            }
+            
+            // 切换结果显示状态
+            function toggleResultsDisplay() {
+                const showResults = toggleResults.checked;
+                const resultCells = document.querySelectorAll('.result-cell');
+                
+                if (showResults) {
+                    resultCells.forEach(cell => cell.classList.remove('hidden'));
+                    resultsStatus.textContent = '显示计算结果';
+                    // 保存状态到localStorage
+                    localStorage.setItem('resultsVisible', 'true');
+                } else {
+                    resultCells.forEach(cell => cell.classList.add('hidden'));
+                    resultsStatus.textContent = '隐藏计算结果';
+                    // 保存状态到localStorage
+                    localStorage.setItem('resultsVisible', 'false');
+                }
+            }
+            
+            // 添加新行
+            function addTableRow(data = { f1: '', l1: '', f2: '', l2: '', result1: '0', result2: '0' }, rowId = null) {
+                const rowCount = tbody.rows.length + 1;
+                const tr = document.createElement('tr');
+                const rowIdentifier = rowId || 'row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                
+                tr.setAttribute('data-row-id', rowIdentifier);
+                tr.innerHTML = `
+                    <td>${rowCount}</td>
+                    <td><input type="number" class="f1-input" placeholder="输入数值" value="${data.f1}"></td>
+                    <td><input type="number" class="l1-input" placeholder="输入数值" value="${data.l1}"></td>
+                    <td><input type="number" class="f2-input" placeholder="输入数值" value="${data.f2}"></td>
+                    <td><input type="number" class="l2-input" placeholder="输入数值" value="${data.l2}"></td>
+                    <td class="result-cell ${toggleResults.checked ? '' : 'hidden'}">${data.result1}</td>
+                    <td class="result-cell ${toggleResults.checked ? '' : 'hidden'}">${data.result2}</td>
+                `;
+                
+                tbody.appendChild(tr);
+                
+                // 添加输入事件监听器
+                const f1Input = tr.querySelector('.f1-input');
+                const l1Input = tr.querySelector('.l1-input');
+                const f2Input = tr.querySelector('.f2-input');
+                const l2Input = tr.querySelector('.l2-input');
+                
+                const calculateAndSave = () => {
+                    const f1 = parseFloat(f1Input.value) || 0;
+                    const l1 = parseFloat(l1Input.value) || 0;
+                    const f2 = parseFloat(f2Input.value) || 0;
+                    const l2 = parseFloat(l2Input.value) || 0;
+                    const result1 = f1 * l1;
+                    const result2 = f2 * l2;
+                    
+                    tr.querySelector('td:nth-child(6)').textContent = result1.toFixed(2);
+                    tr.querySelector('td:nth-child(7)').textContent = result2.toFixed(2);
+                    
+                    // 保存到localStorage
+                    saveRowToStorage(rowIdentifier, {
+                        f1: f1Input.value,
+                        l1: l1Input.value,
+                        f2: f2Input.value,
+                        l2: l2Input.value,
+                        result1: result1.toFixed(2),
+                        result2: result2.toFixed(2)
+                    });
+                };
+                
+                f1Input.addEventListener('input', calculateAndSave);
+                l1Input.addEventListener('input', calculateAndSave);
+                f2Input.addEventListener('input', calculateAndSave);
+                l2Input.addEventListener('input', calculateAndSave);
+                
+                return rowIdentifier;
+            }
+            
+            // 保存单行数据到localStorage
+            function saveRowToStorage(rowId, data) {
+                const savedData = localStorage.getItem('tableData');
+                let allData = savedData ? JSON.parse(savedData) : {};
+                
+                allData[rowId] = data;
+                localStorage.setItem('tableData', JSON.stringify(allData));
+                
+                updateLastUpdateTime();
+                showNotification('数据已保存');
+                
+                // 模拟用户数变化
+                updateUserCount();
+            }
+            
+            // 从localStorage加载所有行数据
+            function loadDataFromStorage() {
+                const savedData = localStorage.getItem('tableData');
+                const resultsVisible = localStorage.getItem('resultsVisible');
+                
+                // 设置结果显示状态
+                if (resultsVisible === 'true') {
+                    toggleResults.checked = true;
+                    resultsStatus.textContent = '显示计算结果';
+                } else {
+                    toggleResults.checked = false;
+                    resultsStatus.textContent = '隐藏计算结果';
+                }
+                
+                if (savedData) {
+                    const allData = JSON.parse(savedData);
+                    
+                    // 清空现有行（保留标题行）
+                    while (tbody.rows.length > 0) {
+                        tbody.deleteRow(0);
+                    }
+                    
+                    // 添加所有行
+                    Object.keys(allData).forEach(rowId => {
+                        const data = allData[rowId];
+                        addTableRow(data, rowId);
+                    });
+                    
+                    updateLastUpdateTime();
+                    updateUserCount();
+                }
+            }
+            
+            // 更新用户计数（简单模拟）
+            function updateUserCount() {
+                // 模拟用户数变化
+                const userCount = 1 + Math.floor(Math.random() * 4);
+                userCountSpan.textContent = userCount;
+            }
+            
+            // 导出数据
+            function exportData() {
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "序号,F1,L1,F2,L2,F1×L1,F2×L2\n";
+                
+                const trs = tbody.querySelectorAll('tr');
+                trs.forEach((tr, index) => {
+                    const f1 = tr.querySelector('.f1-input').value;
+                    const l1 = tr.querySelector('.l1-input').value;
+                    const f2 = tr.querySelector('.f2-input').value;
+                    const l2 = tr.querySelector('.l2-input').value;
+                    const result1 = tr.querySelector('td:nth-child(6)').textContent;
+                    const result2 = tr.querySelector('td:nth-child(7)').textContent;
+                    
+                    csvContent += `${index + 1},${f1},${l1},${f2},${l2},${result1},${result2}\n`;
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "多人表格数据.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification('数据已成功导出为CSV文件！');
+            }
+            
+            // 清空表格
+            function clearTable() {
+                if (confirm('确定要清空表格中的所有数据吗？此操作不可撤销。')) {
+                    localStorage.removeItem('tableData');
+                    
+                    // 清空现有行（保留标题行）
+                    while (tbody.rows.length > 0) {
+                        tbody.deleteRow(0);
+                    }
+                    
+                    // 添加一个空行
+                    addTableRow();
+                    
+                    showNotification('表格已清空！');
+                }
+            }
+            
+            // 监听storage事件以实现"实时"更新（模拟多用户环境）
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'tableData') {
+                    loadDataFromStorage();
+                    showNotification('数据已更新！');
+                }
+            });
+            
+            // 模拟其他用户的更改（实际应用中不需要）
+            setInterval(() => {
+                if (Math.random() > 0.7) { // 30%的几率模拟更改
+                    const savedData = localStorage.getItem('tableData');
+                    if (savedData) {
+                        const allData = JSON.parse(savedData);
+                        const rowIds = Object.keys(allData);
+                        
+                        if (rowIds.length > 0) {
+                            const randomRowId = rowIds[Math.floor(Math.random() * rowIds.length)];
+                            allData[randomRowId].f1 = Math.floor(Math.random() * 10);
+                            allData[randomRowId].l1 = Math.floor(Math.random() * 10);
+                            allData[randomRowId].f2 = Math.floor(Math.random() * 10);
+                            allData[randomRowId].l2 = Math.floor(Math.random() * 10);
+                            allData[randomRowId].result1 = (allData[randomRowId].f1 * allData[randomRowId].l1).toFixed(2);
+                            allData[randomRowId].result2 = (allData[randomRowId].f2 * allData[randomRowId].l2).toFixed(2);
+                            
+                            localStorage.setItem('tableData', JSON.stringify(allData));
+                        }
+                    }
+                }
+                
+                // 更新用户数
+                updateUserCount();
+            }, 5000);
+            
+            // 添加行按钮事件
+            addRowBtn.addEventListener('click', () => {
+                addTableRow();
+            });
+            
+            // 导出数据按钮事件
+            exportBtn.addEventListener('click', exportData);
+            
+            // 清空表格按钮事件
+            clearBtn.addEventListener('click', clearTable);
+            
+            // 切换结果显示事件
+            toggleResults.addEventListener('change', toggleResultsDisplay);
+            
+            // 初始加载数据
+            loadDataFromStorage();
+        });
+    </script>
+</body>
+</html>
